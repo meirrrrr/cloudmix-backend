@@ -5,6 +5,10 @@ from rest_framework import serializers
 from accounts.models import Profile as ProfileModel
 from .presence import is_user_online
 from .models import DirectConversation, Message
+from .services import (
+    get_last_message_for_conversation,
+    get_unread_count_for_conversation,
+)
 
 User = get_user_model()
 
@@ -54,16 +58,25 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.JSONField(allow_null=True))
     def get_last_message(self, obj: DirectConversation):
-        last_message = (
-            obj.messages.select_related("sender__profile").order_by("-created_at").first()
-        )
-        if last_message is None:
-            return None
-        return MessageSerializer(last_message).data
+        return get_last_message_for_conversation(obj.id)
 
     @extend_schema_field(serializers.IntegerField(min_value=0))
     def get_unread_count(self, obj: DirectConversation) -> int:
-        return max(0, int(getattr(obj, "unread_count", 0) or 0))
+        request = self.context.get("request")
+        if request is None or not getattr(request, "user", None):
+            return max(0, int(getattr(obj, "unread_count", 0) or 0))
+        last_read_at = getattr(obj, "current_user_last_read_at", None)
+        if last_read_at is None:
+            if obj.participant_a_id == request.user.id:
+                last_read_at = obj.participant_a_last_read_at
+            else:
+                last_read_at = obj.participant_b_last_read_at
+        unread = get_unread_count_for_conversation(
+            obj.id,
+            user_id=request.user.id,
+            last_read_at=last_read_at,
+        )
+        return max(0, int(unread or 0))
 
 
 class ConversationStartSerializer(serializers.Serializer):

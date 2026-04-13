@@ -1,0 +1,303 @@
+[
+  {
+    "id": 1,
+    "conversation_id": 1,
+    "sender_id": 3,
+    "body": "Hello bro",
+    "created_at": "2026-04-11T15:55:08.813067+00:00"
+  },
+  {
+    "id": 2,
+    "conversation_id": 2,
+    "sender_id": 5,
+    "body": "Hello bro",
+    "created_at": "2026-04-11T15:57:05.633302+00:00"
+  },
+  {
+    "id": 3,
+    "conversation_id": 2,
+    "sender_id": 4,
+    "body": "hello",
+    "created_at": "2026-04-11T15:57:13.572878+00:00"
+  },
+  {
+    "id": 4,
+    "conversation_id": 2,
+    "sender_id": 5,
+    "body": "how are you?",
+    "created_at": "2026-04-11T15:57:21.046823+00:00"
+  },
+  {
+    "id": 5,
+    "conversation_id": 2,
+    "sender_id": 4,
+    "body": "i'm good and you?",
+    "created_at": "2026-04-11T15:57:29.810014+00:00"
+  },
+  {
+    "id": 6,
+    "conversation_id": 2,
+    "sender_id": 5,
+    "body": "i'm too good",
+    "created_at": "2026-04-11T15:57:34.777548+00:00"
+  },
+  {
+    "id": 7,
+    "conversation_id": 2,
+    "sender_id": 4,
+    "body": "Im think about going to football",
+    "created_at": "2026-04-11T16:06:36.122164+00:00"
+  },
+  {
+    "id": 8,
+    "conversation_id": 2,
+    "sender_id": 5,
+    "body": "yea i also think about it",
+    "created_at": "2026-04-11T16:06:45.862014+00:00"
+  },
+  {
+    "id": 9,
+    "conversation_id": 4,
+    "sender_id": 1,
+    "body": "Hello",
+    "created_at": "2026-04-12T08:45:21.053391+00:00"
+  },
+  {
+    "id": 10,
+    "conversation_id": 4,
+    "sender_id": 2,
+    "body": "Hello bro",
+    "created_at": "2026-04-12T08:46:03.410244+00:00"
+  },
+  {
+    "id": 11,
+    "conversation_id": 4,
+    "sender_id": 2,
+    "body": "how are u?",
+    "created_at": "2026-04-12T08:46:09.841398+00:00"
+  },
+  {
+    "id": 12,
+    "conversation_id": 4,
+    "sender_id": 1,
+    "body": ";lakdsjf",
+    "created_at": "2026-04-12T09:55:29.330146+00:00"
+  },
+  {
+    "id": 13,
+    "conversation_id": 4,
+    "sender_id": 1,
+    "body": "adfa",
+    "created_at": "2026-04-12T09:55:31.056782+00:00"
+  },
+  {
+    "id": 14,
+    "conversation_id": 4,
+    "sender_id": 1,
+    "body": "adsf",
+    "created_at": "2026-04-12T09:55:32.448868+00:00"
+  },
+  {
+    "id": 15,
+    "conversation_id": 4,
+    "sender_id": 1,
+    "body": "adf",
+    "created_at": "2026-04-12T09:55:33.403296+00:00"
+  },
+  {
+    "id": 16,
+    "conversation_id": 4,
+    "sender_id": 1,
+    "body": "adsf",
+    "created_at": "2026-04-12T09:55:34.537294+00:00"
+  },
+  {
+    "id": 17,
+    "conversation_id": 4,
+    "sender_id": 1,
+    "body": "adsf",
+    "created_at": "2026-04-12T09:55:35.571023+00:00"
+  },
+  {
+    "id": 18,
+    "conversation_id": 4,
+    "sender_id": 2,
+    "body": "aurasynba",
+    "created_at": "2026-04-12T09:56:06.962057+00:00"
+  },
+  {
+    "id": 19,
+    "conversation_id": 5,
+    "sender_id": 7,
+    "body": "Hello",
+    "created_at": "2026-04-12T10:06:06.760656+00:00"
+  },
+  {
+    "id": 20,
+    "conversation_id": 5,
+    "sender_id": 7,
+    "body": "How are you?",
+    "created_at": "2026-04-12T10:11:29.588137+00:00"
+  },
+  {
+    "id": 21,
+    "conversation_id": 5,
+    "sender_id": 7,
+    "body": "im good",
+    "created_at": "2026-04-12T10:11:57.479208+00:00"
+  },
+  {
+    "id": 22,
+    "conversation_id": 5,
+    "sender_id": 6,
+    "body": "Hello bro",
+    "created_at": "2026-04-12T10:13:03.228631+00:00"
+  },
+  {
+    "id": 23,
+    "conversation_id": 5,
+    "sender_id": 6,
+    "body": "i'm good too",
+    "created_at": "2026-04-12T10:13:08.212285+00:00"
+  },
+  {
+    "id": 24,
+    "conversation_id": 5,
+    "sender_id": 7,
+    "body": "Yo Samurai, me and pokemon head will going to  Dostyk, will u join?",
+    "created_at": "2026-04-12T10:45:37.177376+00:00"
+  },
+  {
+    "id": 25,
+    "conversation_id": 5,
+    "sender_id": 6,
+    "body": "yea let's go",
+    "created_at": "2026-04-12T13:26:22.509323+00:00"
+  },
+  {
+    "id": 26,
+    "conversation_id": 5,
+    "sender_id": 6,
+    "body": "how are u",
+    "created_at": "2026-04-12T13:26:32.150107+00:00"
+  },
+  {
+    "id": 27,
+    "conversation_id": 5,
+    "sender_id": 7,
+    "body": "i'm good",
+    "created_at": "2026-04-12T13:29:33.284640+00:00"
+  },
+  {
+    "id": 28,
+    "conversation_id": 5,
+    "sender_id": 7,
+    "body": "afd",
+    "created_at": "2026-04-12T13:30:37.063499+00:00"
+  },
+  {
+    "id": 29,
+    "conversation_id": 6,
+    "sender_id": 2,
+    "body": "Hello",
+    "created_at": "2026-04-12T13:32:05.059693+00:00"
+  },
+  {
+    "id": 30,
+    "conversation_id": 6,
+    "sender_id": 2,
+    "body": "how are u",
+    "created_at": "2026-04-12T13:32:12.688826+00:00"
+  },
+  {
+    "id": 31,
+    "conversation_id": 6,
+    "sender_id": 7,
+    "body": "hi bro",
+    "created_at": "2026-04-12T13:34:14.362528+00:00"
+  },
+  {
+    "id": 32,
+    "conversation_id": 6,
+    "sender_id": 7,
+    "body": "hi",
+    "created_at": "2026-04-12T13:34:17.375727+00:00"
+  },
+  {
+    "id": 33,
+    "conversation_id": 6,
+    "sender_id": 7,
+    "body": "adsf",
+    "created_at": "2026-04-12T13:34:22.267135+00:00"
+  },
+  {
+    "id": 34,
+    "conversation_id": 6,
+    "sender_id": 7,
+    "body": "asdfas",
+    "created_at": "2026-04-12T13:34:26.181338+00:00"
+  },
+  {
+    "id": 35,
+    "conversation_id": 7,
+    "sender_id": 9,
+    "body": "Hello",
+    "created_at": "2026-04-12T13:57:25.956561+00:00"
+  },
+  {
+    "id": 36,
+    "conversation_id": 7,
+    "sender_id": 9,
+    "body": "Hi bro, how are you? I'm fine too",
+    "created_at": "2026-04-12T14:33:51.157929+00:00"
+  },
+  {
+    "id": 37,
+    "conversation_id": 7,
+    "sender_id": 9,
+    "body": "im good",
+    "created_at": "2026-04-12T14:34:00.330463+00:00"
+  },
+  {
+    "id": 38,
+    "conversation_id": 7,
+    "sender_id": 8,
+    "body": "HI",
+    "created_at": "2026-04-12T14:34:19.155282+00:00"
+  },
+  {
+    "id": 39,
+    "conversation_id": 7,
+    "sender_id": 8,
+    "body": "Im good and you",
+    "created_at": "2026-04-12T14:34:25.150937+00:00"
+  },
+  {
+    "id": 40,
+    "conversation_id": 7,
+    "sender_id": 8,
+    "body": "let's go to basketball",
+    "created_at": "2026-04-12T14:35:44.158484+00:00"
+  },
+  {
+    "id": 41,
+    "conversation_id": 7,
+    "sender_id": 9,
+    "body": "yea let's go",
+    "created_at": "2026-04-12T14:35:52.249566+00:00"
+  },
+  {
+    "id": 42,
+    "conversation_id": 7,
+    "sender_id": 9,
+    "body": "go home",
+    "created_at": "2026-04-12T14:41:55.124654+00:00"
+  },
+  {
+    "id": 43,
+    "conversation_id": 7,
+    "sender_id": 8,
+    "body": "no i will go to outside now",
+    "created_at": "2026-04-12T14:48:23.425398+00:00"
+  }
+]

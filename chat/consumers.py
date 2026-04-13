@@ -3,10 +3,10 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.utils import timezone
 
 from accounts.models import Profile
-from .models import DirectConversation, Message
+from .models import DirectConversation
 from .presence import decrement_user_connections, increment_user_connections
 from .serializers import MessageCreateSerializer
-from .services import message_to_payload, persist_chat_message
+from .services import save_message
 
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
@@ -140,16 +140,14 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if not ser.is_valid():
             return False, ser.errors
         try:
-            msg = persist_chat_message(
+            payload = save_message(
                 conversation_id, user, ser.validated_data["body"]
             )
         except DirectConversation.DoesNotExist:
             return False, {"detail": ["Conversation not found."]}
         except PermissionError:
             return False, {"detail": ["You are not a participant in this conversation."]}
-
-        msg = Message.objects.select_related("sender__profile").get(pk=msg.pk)
-        return True, message_to_payload(msg)
+        return True, payload
 
     @database_sync_to_async
     def _increment_presence_connections(self, user_id: int) -> int:

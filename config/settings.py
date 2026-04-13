@@ -98,6 +98,16 @@ else:
         },
     }
 
+FIREBASE_CREDENTIALS = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "").strip()
+FIRESTORE_MESSAGES_ENABLED = (
+    os.environ.get("FIRESTORE_MESSAGES_ENABLED", "false").strip().lower()
+    in {"1", "true", "yes", "on"}
+)
+FIRESTORE_MESSAGES_COLLECTION = os.environ.get(
+    "FIRESTORE_MESSAGES_COLLECTION", "messages"
+).strip()
+
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases

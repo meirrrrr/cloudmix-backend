@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Case, Count, DateTimeField, F, Q, When
+from django.db.models import Case, DateTimeField, F, Q, When
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from drf_spectacular.utils import (
     OpenApiParameter,
     extend_schema,
@@ -12,14 +13,14 @@ from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import DirectConversation, Message
+from .models import DirectConversation
 from .serializers import (
     ConversationSerializer,
     ConversationStartSerializer,
     MessageCreateSerializer,
     MessageSerializer,
 )
-from .services import broadcast_chat_message, message_to_payload, persist_chat_message
+from .services import broadcast_chat_message, get_messages, save_message
 
 User = get_user_model()
 
@@ -33,6 +34,8 @@ MessagesPageSerializer = inline_serializer(
     fields={
         "results": MessageSerializer(many=True),
         "has_more": serializers.BooleanField(),
+        "next_before": serializers.IntegerField(allow_null=True),
+        "next_before_created_at": serializers.CharField(allow_null=True),
     },
 )
 
@@ -48,25 +51,11 @@ def _conversation_qs_for_user(user):
         )
         .order_by("-updated_at")
     )
-    return (
-        base_qs.annotate(
-            current_user_last_read_at=Case(
-                When(participant_a=user, then=F("participant_a_last_read_at")),
-                default=F("participant_b_last_read_at"),
-                output_field=DateTimeField(),
-            )
-        )
-        .annotate(
-            unread_count=Count(
-                "messages",
-                filter=(
-                    ~Q(messages__sender=user)
-                    & (
-                        Q(current_user_last_read_at__isnull=True)
-                        | Q(messages__created_at__gt=F("current_user_last_read_at"))
-                    )
-                ),
-            )
+    return base_qs.annotate(
+        current_user_last_read_at=Case(
+            When(participant_a=user, then=F("participant_a_last_read_at")),
+            default=F("participant_b_last_read_at"),
+            output_field=DateTimeField(),
         )
     )
 
@@ -151,6 +140,13 @@ class ConversationStartView(APIView):
                 required=False,
                 description="Only messages older than this message id (for paging upward).",
             ),
+            OpenApiParameter(
+                name="before_created_at",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Only messages older than this ISO datetime (Firestore paging cursor).",
+            ),
         ],
         responses={200: MessagesPageSerializer, 404: ErrorDetailSerializer},
     ),
@@ -182,19 +178,41 @@ class ConversationMessagesView(APIView):
                     {"detail": "Invalid 'before' parameter."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+        before_created_at_raw = request.query_params.get("before_created_at")
+        before_created_at = None
+        if (
+            before_created_at_raw is not None
+            and before_created_at_raw != ""
+        ):
+            before_created_at = parse_datetime(before_created_at_raw)
+            if before_created_at is None:
+                return Response(
+                    {"detail": "Invalid 'before_created_at' parameter."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if timezone.is_naive(before_created_at):
+                before_created_at = timezone.make_aware(
+                    before_created_at,
+                    timezone.get_current_timezone(),
+                )
 
-        qs = conv.messages.select_related("sender__profile").order_by("-created_at")
-        if before_id is not None:
-            qs = qs.filter(pk__lt=before_id)
-
-        chunk = list(qs[: limit + 1])
-        has_more = len(chunk) > limit
-        chunk = chunk[:limit]
-        chunk.reverse()
+        chunk, has_more = get_messages(
+            conv.pk,
+            limit=limit,
+            before_id=before_id,
+            before_created_at=before_created_at,
+        )
+        next_before = None
+        next_before_created_at = None
+        if has_more and chunk:
+            next_before = chunk[0]["id"]
+            next_before_created_at = chunk[0]["created_at"]
         return Response(
             {
-                "results": MessageSerializer(chunk, many=True).data,
+                "results": chunk,
                 "has_more": has_more,
+                "next_before": next_before,
+                "next_before_created_at": next_before_created_at,
             }
         )
 
@@ -202,11 +220,7 @@ class ConversationMessagesView(APIView):
         conv = _conversation_for_user_or_404(request.user, conversation_id)
         ser = MessageCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        msg = persist_chat_message(
-            conv.pk, request.user, ser.validated_data["body"]
-        )
-        msg = Message.objects.select_related("sender__profile").get(pk=msg.pk)
-        payload = message_to_payload(msg)
+        payload = save_message(conv.pk, request.user, ser.validated_data["body"])
         broadcast_chat_message(conv.pk, payload)
         return Response(payload, status=status.HTTP_201_CREATED)
 
