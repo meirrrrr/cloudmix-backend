@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
+from drf_spectacular.utils import inline_serializer
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -18,15 +18,7 @@ from .serializers import LoginSerializer, MeSerializer, RegisterSerializer, User
 User = get_user_model()
 
 ErrorDetailSerializer = inline_serializer(
-    "ErrorDetail",
-    fields={"detail": serializers.CharField()},
-)
-RefreshOkSerializer = inline_serializer(
-    "RefreshOk",
-    fields={"detail": serializers.CharField()},
-)
-LogoutOkSerializer = inline_serializer(
-    "LogoutOk",
+    "AccountsErrorDetail",
     fields={"detail": serializers.CharField()},
 )
 
@@ -36,7 +28,6 @@ def _tokens_for_user(user):
     return str(refresh.access_token), str(refresh)
 
 
-@extend_schema(tags=["Auth"], request=RegisterSerializer, responses={201: MeSerializer})
 @method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -51,11 +42,6 @@ class RegisterView(APIView):
         return resp
 
 
-@extend_schema(
-    tags=["Auth"],
-    request=LoginSerializer,
-    responses={200: MeSerializer, 401: ErrorDetailSerializer},
-)
 @method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -79,12 +65,6 @@ class LoginView(APIView):
         return resp
 
 
-@extend_schema(
-    tags=["Auth"],
-    request=None,
-    responses={200: RefreshOkSerializer, 401: ErrorDetailSerializer},
-    description="Reads refresh token from HttpOnly cookie; sets new access (and refresh) cookies.",
-)
 @method_decorator(csrf_exempt, name="dispatch")
 class TokenRefreshView(APIView):
     permission_classes = [AllowAny]
@@ -109,15 +89,6 @@ class TokenRefreshView(APIView):
         return resp
 
 
-@extend_schema(
-    tags=["Auth"],
-    request=None,
-    responses={200: LogoutOkSerializer},
-    description=(
-        "Clears auth cookies. If refresh token blacklisting is enabled and a refresh "
-        "cookie is present, the refresh token is blacklisted."
-    ),
-)
 @method_decorator(csrf_exempt, name="dispatch")
 class LogoutView(APIView):
     permission_classes = [AllowAny]
@@ -137,7 +108,6 @@ class LogoutView(APIView):
         return resp
 
 
-@extend_schema(tags=["Users"], responses={200: MeSerializer})
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -145,22 +115,6 @@ class MeView(APIView):
         return Response(MeSerializer(request.user).data)
 
 
-@extend_schema(
-    tags=["Users"],
-    parameters=[
-        OpenApiParameter(
-            name="name",
-            type=str,
-            location=OpenApiParameter.QUERY,
-            required=True,
-            description="Substring match on display name or username.",
-        ),
-    ],
-    responses={
-        200: UserSearchSerializer(many=True),
-        400: ErrorDetailSerializer,
-    },
-)
 class UserSearchView(APIView):
     permission_classes = [IsAuthenticated]
 

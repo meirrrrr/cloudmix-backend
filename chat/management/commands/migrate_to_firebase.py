@@ -25,8 +25,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        if not bool(getattr(settings, "FIRESTORE_MESSAGES_ENABLED", False)):
-            raise CommandError("Set FIRESTORE_MESSAGES_ENABLED=true before migrating.")
+        use_firestore = bool(
+            getattr(
+                settings,
+                "USE_FIRESTORE_MESSAGES",
+                getattr(settings, "FIRESTORE_MESSAGES_ENABLED", False),
+            )
+        )
+        if not use_firestore:
+            raise CommandError("Set USE_FIRESTORE_MESSAGES=true before migrating.")
 
         input_path = Path(options["input"]).expanduser()
         if not input_path.exists():

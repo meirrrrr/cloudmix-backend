@@ -6,7 +6,7 @@ from accounts.models import Profile
 from .models import DirectConversation
 from .presence import decrement_user_connections, increment_user_connections
 from .serializers import MessageCreateSerializer
-from .services import save_message
+from .services import maybe_generate_ai_reply, save_message
 
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
@@ -115,6 +115,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name,
             {"type": "chat.message", "message": payload_or_errors},
+        )
+        maybe_generate_ai_reply(
+            self.conversation_id,
+            self.scope["user"],
+            payload_or_errors["body"],
         )
 
     async def chat_message(self, event):

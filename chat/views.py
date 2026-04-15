@@ -3,12 +3,7 @@ from django.db.models import Case, DateTimeField, F, Q, When
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from drf_spectacular.utils import (
-    OpenApiParameter,
-    extend_schema,
-    extend_schema_view,
-    inline_serializer,
-)
+from drf_spectacular.utils import inline_serializer
 from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -20,7 +15,13 @@ from .serializers import (
     MessageCreateSerializer,
     MessageSerializer,
 )
-from .services import broadcast_chat_message, get_messages, save_message
+from .services import (
+    broadcast_chat_message,
+    ensure_ai_conversation_for_user,
+    get_messages,
+    maybe_generate_ai_reply,
+    save_message,
+)
 
 User = get_user_model()
 
@@ -77,24 +78,23 @@ def _conversation_for_user_or_404(user, pk: int) -> DirectConversation:
     return get_object_or_404(_conversation_qs_for_user(user), pk=pk)
 
 
-@extend_schema(tags=["Chat"], responses={200: ConversationSerializer(many=True)})
 class ConversationListView(APIView):
     def get(self, request):
+        ensure_ai_conversation_for_user(request.user)
         qs = _conversation_qs_for_user(request.user)
         return Response(
             ConversationSerializer(qs, many=True, context={"request": request}).data
         )
 
 
-@extend_schema(
-    tags=["Chat"],
-    request=ConversationStartSerializer,
-    responses={
-        200: ConversationSerializer,
-        400: ErrorDetailSerializer,
-        404: ErrorDetailSerializer,
-    },
-)
+class ConversationDetailView(APIView):
+    def get(self, request, conversation_id: int):
+        conv = _conversation_for_user_or_404(request.user, conversation_id)
+        return Response(
+            ConversationSerializer(conv, context={"request": request}).data
+        )
+
+
 class ConversationStartView(APIView):
     def post(self, request):
         ser = ConversationStartSerializer(data=request.data)
@@ -122,44 +122,7 @@ class ConversationStartView(APIView):
         )
 
 
-@extend_schema_view(
-    get=extend_schema(
-        tags=["Chat"],
-        parameters=[
-            OpenApiParameter(
-                name="limit",
-                type=int,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Max messages to return (default 50, max 100).",
-            ),
-            OpenApiParameter(
-                name="before",
-                type=int,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Only messages older than this message id (for paging upward).",
-            ),
-            OpenApiParameter(
-                name="before_created_at",
-                type=str,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Only messages older than this ISO datetime (Firestore paging cursor).",
-            ),
-        ],
-        responses={200: MessagesPageSerializer, 404: ErrorDetailSerializer},
-    ),
-    post=extend_schema(
-        tags=["Chat"],
-        request=MessageCreateSerializer,
-        responses={
-            201: MessageSerializer,
-            400: ErrorDetailSerializer,
-            404: ErrorDetailSerializer,
-        },
-    ),
-)
+
 class ConversationMessagesView(APIView):
     def get(self, request, conversation_id: int):
         conv = _conversation_for_user_or_404(request.user, conversation_id)
@@ -220,15 +183,13 @@ class ConversationMessagesView(APIView):
         conv = _conversation_for_user_or_404(request.user, conversation_id)
         ser = MessageCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        payload = save_message(conv.pk, request.user, ser.validated_data["body"])
+        body = ser.validated_data["body"]
+        payload = save_message(conv.pk, request.user, body)
         broadcast_chat_message(conv.pk, payload)
+        maybe_generate_ai_reply(conv.pk, request.user, body)
         return Response(payload, status=status.HTTP_201_CREATED)
 
 
-@extend_schema(
-    tags=["Chat"],
-    responses={204: None, 404: ErrorDetailSerializer},
-)
 class ConversationReadView(APIView):
     def post(self, request, conversation_id: int):
         conv = _conversation_for_user_or_404(request.user, conversation_id)

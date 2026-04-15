@@ -7,6 +7,8 @@ from .presence import is_user_online
 from .models import DirectConversation, Message
 from .services import (
     get_last_message_for_conversation,
+    is_ai_assistant_conversation,
+    is_ai_bot_user_id,
     get_unread_count_for_conversation,
 )
 
@@ -31,6 +33,8 @@ class PeerUserSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.BooleanField())
     def get_is_online(self, obj) -> bool:
+        if is_ai_bot_user_id(obj.id):
+            return True
         return is_user_online(obj.id)
 
     @extend_schema_field(serializers.DateTimeField(allow_null=True))
@@ -45,10 +49,18 @@ class ConversationSerializer(serializers.ModelSerializer):
     peer = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    is_ai_assistant = serializers.SerializerMethodField()
 
     class Meta:
         model = DirectConversation
-        fields = ("id", "updated_at", "peer", "last_message", "unread_count")
+        fields = (
+            "id",
+            "updated_at",
+            "peer",
+            "last_message",
+            "unread_count",
+            "is_ai_assistant",
+        )
 
     @extend_schema_field(PeerUserSerializer())
     def get_peer(self, obj: DirectConversation):
@@ -77,6 +89,10 @@ class ConversationSerializer(serializers.ModelSerializer):
             last_read_at=last_read_at,
         )
         return max(0, int(unread or 0))
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_ai_assistant(self, obj: DirectConversation) -> bool:
+        return is_ai_assistant_conversation(obj)
 
 
 class ConversationStartSerializer(serializers.Serializer):

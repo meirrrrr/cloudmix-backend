@@ -22,6 +22,13 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -100,13 +107,27 @@ else:
 
 FIREBASE_CREDENTIALS = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
 FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "").strip()
-FIRESTORE_MESSAGES_ENABLED = (
-    os.environ.get("FIRESTORE_MESSAGES_ENABLED", "false").strip().lower()
-    in {"1", "true", "yes", "on"}
+USE_FIRESTORE_MESSAGES = _env_bool(
+    "USE_FIRESTORE_MESSAGES",
+    default=_env_bool("FIRESTORE_MESSAGES_ENABLED", False),
 )
+# Backward-compatible alias used by existing chat services.
+FIRESTORE_MESSAGES_ENABLED = USE_FIRESTORE_MESSAGES
 FIRESTORE_MESSAGES_COLLECTION = os.environ.get(
     "FIRESTORE_MESSAGES_COLLECTION", "messages"
 ).strip()
+
+CHAT_AI_BOT_USERNAME = os.environ.get(
+    "CHAT_AI_BOT_USERNAME", "ai_assistant_bot"
+).strip() or "ai_assistant_bot"
+CHAT_AI_BOT_DISPLAY_NAME = os.environ.get(
+    "CHAT_AI_BOT_DISPLAY_NAME", "AI Assistant"
+).strip() or "AI Assistant"
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
+OPENAI_TIMEOUT_SECONDS = float(os.environ.get("OPENAI_TIMEOUT_SECONDS", "20"))
 
 
 # Database
