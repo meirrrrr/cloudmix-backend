@@ -23,6 +23,10 @@ USE_FIRESTORE_MESSAGES=true - true if use firestore for saving messages, if fals
 OPENAI_API_KEY=openaitoken
 ```
 
+```
+To use firestore, get firestore_credentials.json, and put on .env level. In .env place USE_FIRESTORE_MESSAGES=true to use firstore as message store.
+```
+
 Optional backend env:
 
 - `OPENAI_API_KEY` if you use AI chat features
