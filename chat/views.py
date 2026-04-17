@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Case, DateTimeField, F, Q, When
+from django.db.models import Case, DateTimeField, F, IntegerField, Q, When
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -18,6 +18,7 @@ from .serializers import (
 from .services import (
     broadcast_chat_message,
     ensure_ai_conversation_for_user,
+    get_ai_bot_user,
     get_messages,
     maybe_generate_ai_reply,
     save_message,
@@ -81,9 +82,21 @@ def _conversation_for_user_or_404(user, pk: int) -> DirectConversation:
 class ConversationListView(APIView):
     def get(self, request):
         ensure_ai_conversation_for_user(request.user)
-        qs = _conversation_qs_for_user(request.user)
+        ai_bot_user = get_ai_bot_user()
+        qs = _conversation_qs_for_user(request.user).annotate(
+            ai_sort_rank=Case(
+                When(participant_a_id=ai_bot_user.id, then=0),
+                When(participant_b_id=ai_bot_user.id, then=0),
+                default=1,
+                output_field=IntegerField(),
+            )
+        )
         return Response(
-            ConversationSerializer(qs, many=True, context={"request": request}).data
+            ConversationSerializer(
+                qs.order_by("ai_sort_rank", "-updated_at"),
+                many=True,
+                context={"request": request},
+            ).data
         )
 
 

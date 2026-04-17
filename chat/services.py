@@ -31,6 +31,9 @@ USE_FIRESTORE_MESSAGES = bool(
         getattr(settings, "FIRESTORE_MESSAGES_ENABLED", False),
     )
 )
+FIRESTORE_REQUEST_TIMEOUT_SECONDS = float(
+    getattr(settings, "FIRESTORE_REQUEST_TIMEOUT_SECONDS", 5)
+)
 AI_TYPING_MIN_DELAY_SECONDS = 1.0
 AI_TYPING_MAX_DELAY_SECONDS = 5.0
 logger = logging.getLogger(__name__)
@@ -165,7 +168,10 @@ def save_message(conversation_id: int, user, body: str) -> dict:
         "body": body,
         "created_at": created_at,
     }
-    client.collection(FIRESTORE_MESSAGES_COLLECTION).document(str(message_id)).set(payload)
+    client.collection(FIRESTORE_MESSAGES_COLLECTION).document(str(message_id)).set(
+        payload,
+        timeout=FIRESTORE_REQUEST_TIMEOUT_SECONDS,
+    )
     DirectConversation.objects.filter(pk=conversation_id).update(updated_at=created_at)
     return _message_doc_to_payload(payload, {user.id: user})
 
@@ -202,14 +208,18 @@ def get_messages(
     if before_created_at is not None:
         query = query.where("created_at", "<", before_created_at)
     elif before_id is not None:
-        cursor_doc = collection_ref.document(str(int(before_id))).get()
+        cursor_doc = collection_ref.document(str(int(before_id))).get(
+            timeout=FIRESTORE_REQUEST_TIMEOUT_SECONDS
+        )
         if not cursor_doc.exists:
             return [], False
         cursor_data = cursor_doc.to_dict() or {}
         if int(cursor_data.get("conversation_id", -1)) != int(conversation_id):
             return [], False
         query = query.start_after(cursor_doc)
-    docs = list(query.limit(limit + 1).stream())
+    docs = list(
+        query.limit(limit + 1).stream(timeout=FIRESTORE_REQUEST_TIMEOUT_SECONDS)
+    )
     rows = [doc.to_dict() for doc in docs]
     has_more = len(rows) > limit
     rows = rows[:limit]
@@ -229,20 +239,27 @@ def get_last_message_for_conversation(conversation_id: int):
         )
         return None if msg is None else message_to_payload(msg)
 
-    client = get_firestore_client()
-    docs = list(
-        client.collection(FIRESTORE_MESSAGES_COLLECTION)
-        .where("conversation_id", "==", int(conversation_id))
-        .stream()
-    )
-    rows = [doc.to_dict() for doc in docs]
-    if not rows:
+    try:
+        client = get_firestore_client()
+        docs = list(
+            client.collection(FIRESTORE_MESSAGES_COLLECTION)
+            .where("conversation_id", "==", int(conversation_id))
+            .order_by("created_at", direction=firestore.Query.DESCENDING)
+            .limit(1)
+            .stream(timeout=FIRESTORE_REQUEST_TIMEOUT_SECONDS)
+        )
+        if not docs:
+            return None
+        row = docs[0].to_dict() or {}
+        sender = User.objects.filter(pk=int(row["sender_id"])).first()
+        sender_map = {sender.id: sender} if sender else {}
+        return _message_doc_to_payload(row, sender_map)
+    except Exception:
+        logger.exception(
+            "Failed to fetch last Firestore message for conversation_id=%s",
+            conversation_id,
+        )
         return None
-    rows.sort(key=lambda item: int(item["id"]), reverse=True)
-    row = rows[0]
-    sender = User.objects.filter(pk=int(row["sender_id"])).first()
-    sender_map = {sender.id: sender} if sender else {}
-    return _message_doc_to_payload(row, sender_map)
 
 
 def get_unread_count_for_conversation(
@@ -259,26 +276,28 @@ def get_unread_count_for_conversation(
             qs = qs.filter(created_at__gt=last_read_at)
         return qs.count()
 
-    client = get_firestore_client()
-    query = client.collection(FIRESTORE_MESSAGES_COLLECTION).where(
-        "conversation_id", "==", int(conversation_id)
-    )
-    count = 0
-    for doc in query.stream():
-        row = doc.to_dict()
-        if int(row["sender_id"]) == int(user_id):
-            continue
-        created_at = row.get("created_at")
-        if isinstance(created_at, str):
-            created_at = parse_datetime(created_at)
-        if (
-            last_read_at is not None
-            and created_at is not None
-            and created_at <= last_read_at
-        ):
-            continue
-        count += 1
-    return count
+    try:
+        client = get_firestore_client()
+        query = client.collection(FIRESTORE_MESSAGES_COLLECTION).where(
+            "conversation_id", "==", int(conversation_id)
+        )
+        if last_read_at is not None:
+            query = query.where("created_at", ">", last_read_at)
+
+        count = 0
+        for doc in query.stream(timeout=FIRESTORE_REQUEST_TIMEOUT_SECONDS):
+            row = doc.to_dict() or {}
+            if int(row.get("sender_id", -1)) == int(user_id):
+                continue
+            count += 1
+        return count
+    except Exception:
+        logger.exception(
+            "Failed to compute unread Firestore count for conversation_id=%s user_id=%s",
+            conversation_id,
+            user_id,
+        )
+        return 0
 
 
 def ensure_firestore_ready() -> None:

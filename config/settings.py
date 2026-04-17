@@ -128,6 +128,9 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
 OPENAI_TIMEOUT_SECONDS = float(os.environ.get("OPENAI_TIMEOUT_SECONDS", "20"))
+FIRESTORE_REQUEST_TIMEOUT_SECONDS = float(
+    os.environ.get("FIRESTORE_REQUEST_TIMEOUT_SECONDS", "5")
+)
 
 
 # Database
