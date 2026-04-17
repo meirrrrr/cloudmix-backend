@@ -36,7 +36,7 @@ def _env_bool(name: str, default: bool = False) -> bool:
 SECRET_KEY = 'django-insecure-dbja@+e3rpb0zr^^mti5isx%gg$9qt36u7ku!&(ps(08ar(j9('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env_bool("DJANGO_DEBUG", True)
 
 ALLOWED_HOSTS = ["*"]
 
@@ -212,13 +212,40 @@ SIMPLE_JWT = {
 
 AUTH_ACCESS_COOKIE_NAME = 'access_token'
 AUTH_REFRESH_COOKIE_NAME = 'refresh_token'
-AUTH_COOKIE_SECURE = DEBUG
-AUTH_COOKIE_SAMESITE = 'None'
+
+# Cross-origin browser auth (SPA on Vercel, API on Render): Set-Cookie must use
+# SameSite=None and Secure=True together; otherwise the cookie is rejected.
+# https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
+_on_render = os.environ.get("RENDER", "").strip().lower() in {"true", "1", "yes"}
+_cross_site_default = _on_render or not DEBUG
+CROSS_SITE_AUTH_COOKIES = _env_bool("CROSS_SITE_AUTH_COOKIES", default=_cross_site_default)
+
+if CROSS_SITE_AUTH_COOKIES:
+    AUTH_COOKIE_SAMESITE = "None"
+    AUTH_COOKIE_SECURE = _env_bool("AUTH_COOKIE_SECURE", default=True)
+else:
+    AUTH_COOKIE_SAMESITE = "Lax"
+    AUTH_COOKIE_SECURE = _env_bool("AUTH_COOKIE_SECURE", default=False)
+
+# Browsers ignore SameSite=None unless Secure is true — never allow a broken combo.
+if AUTH_COOKIE_SAMESITE == "None":
+    AUTH_COOKIE_SECURE = True
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-	'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://192.168.100.60:5173',
-    'http://192.168.100.60:5173',
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://192.168.100.60:5173",
+    "https://cloudmix-frontend.vercel.app",
+    "https://cloudmix-backend.onrender.com",
+]
+# Preview deployments and alternate Vercel hostnames (credentials require an explicit match).
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+]
+
+# WebSocket Origin header must match these patterns (Channels OriginValidator; not the same as CORS regex).
+# Include https://.vercel.app so every *.vercel.app deployment works without listing each host.
+WEBSOCKET_ALLOWED_ORIGINS = list(CORS_ALLOWED_ORIGINS) + [
+    "https://.vercel.app",
 ]

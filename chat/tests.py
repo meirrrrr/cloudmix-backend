@@ -122,7 +122,7 @@ class ChatWebsocketTests(TransactionTestCase):
         token = str(RefreshToken.for_user(user).access_token)
         name = settings.AUTH_ACCESS_COOKIE_NAME
         return [
-            (b"origin", b"http://localhost"),
+            (b"origin", b"http://localhost:5173"),
             (b"cookie", f"{name}={token}".encode()),
         ]
 
