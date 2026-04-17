@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import firebase_admin
@@ -11,25 +12,42 @@ _COUNTER_DOC = "counters"
 _COUNTER_FIELD = "message_id"
 
 
-def _credentials_path() -> Path:
+def _firebase_credentials():
+    """
+    FIREBASE_CREDENTIALS may be:
+    - A filesystem path (relative to BASE_DIR or absolute), for local dev.
+    - Inline service-account JSON (string starting with '{'), e.g. on Render.
+    """
     raw_value = (getattr(settings, "FIREBASE_CREDENTIALS", "") or "").strip()
     if not raw_value:
         raise ImproperlyConfigured(
             "FIREBASE_CREDENTIALS is required for Firestore message storage."
         )
+    if raw_value.startswith("{"):
+        try:
+            data = json.loads(raw_value)
+        except json.JSONDecodeError as e:
+            raise ImproperlyConfigured(
+                "FIREBASE_CREDENTIALS must be valid JSON when used as inline credentials."
+            ) from e
+        if not isinstance(data, dict):
+            raise ImproperlyConfigured(
+                "FIREBASE_CREDENTIALS JSON must be an object (service account key)."
+            )
+        return credentials.Certificate(data)
     path = Path(raw_value)
     if not path.is_absolute():
         path = Path(settings.BASE_DIR) / path
     if not path.exists():
         raise ImproperlyConfigured(f"Firebase credentials file not found: {path}")
-    return path
+    return credentials.Certificate(str(path))
 
 
 def get_firebase_app():
     existing = firebase_admin._apps.get(_APP_NAME)
     if existing:
         return existing
-    cred = credentials.Certificate(str(_credentials_path()))
+    cred = _firebase_credentials()
     options = {}
     project_id = (getattr(settings, "FIREBASE_PROJECT_ID", "") or "").strip()
     if project_id:

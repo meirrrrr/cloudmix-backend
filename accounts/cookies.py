@@ -33,5 +33,9 @@ def attach_auth_cookies(response: HttpResponse | Response, access: str, refresh:
 
 
 def clear_auth_cookies(response: HttpResponse | Response) -> None:
-    response.delete_cookie(settings.AUTH_ACCESS_COOKIE_NAME, path="/")
-    response.delete_cookie(settings.AUTH_REFRESH_COOKIE_NAME, path="/")
+    extra: dict = {"path": "/"}
+    if settings.AUTH_COOKIE_SAMESITE == "None":
+        extra["samesite"] = "None"
+        extra["secure"] = True
+    response.delete_cookie(settings.AUTH_ACCESS_COOKIE_NAME, **extra)
+    response.delete_cookie(settings.AUTH_REFRESH_COOKIE_NAME, **extra)

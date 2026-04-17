@@ -105,6 +105,7 @@ else:
         },
     }
 
+# Path to the service account JSON (relative to BASE_DIR or absolute), or paste the full JSON string (Render).
 FIREBASE_CREDENTIALS = os.environ.get("FIREBASE_CREDENTIALS", "").strip()
 FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "").strip()
 USE_FIRESTORE_MESSAGES = _env_bool(
@@ -186,7 +187,7 @@ STATIC_URL = 'static/'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'accounts.authentication.CookieJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -210,28 +211,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
 }
 
-AUTH_ACCESS_COOKIE_NAME = 'access_token'
-AUTH_REFRESH_COOKIE_NAME = 'refresh_token'
-
-# Cross-origin browser auth (SPA on Vercel, API on Render): Set-Cookie must use
-# SameSite=None and Secure=True together; otherwise the cookie is rejected.
-# https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
-_on_render = os.environ.get("RENDER", "").strip().lower() in {"true", "1", "yes"}
-_cross_site_default = _on_render or not DEBUG
-CROSS_SITE_AUTH_COOKIES = _env_bool("CROSS_SITE_AUTH_COOKIES", default=_cross_site_default)
-
-if CROSS_SITE_AUTH_COOKIES:
-    AUTH_COOKIE_SAMESITE = "None"
-    AUTH_COOKIE_SECURE = _env_bool("AUTH_COOKIE_SECURE", default=True)
-else:
-    AUTH_COOKIE_SAMESITE = "Lax"
-    AUTH_COOKIE_SECURE = _env_bool("AUTH_COOKIE_SECURE", default=False)
-
-# Browsers ignore SameSite=None unless Secure is true — never allow a broken combo.
-if AUTH_COOKIE_SAMESITE == "None":
-    AUTH_COOKIE_SECURE = True
-
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",

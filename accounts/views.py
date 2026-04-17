@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -12,7 +11,6 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .cookies import attach_auth_cookies, clear_auth_cookies
 from .serializers import LoginSerializer, MeSerializer, RegisterSerializer, UserSearchSerializer
 
 User = get_user_model()
@@ -28,22 +26,29 @@ def _tokens_for_user(user):
     return str(refresh.access_token), str(refresh)
 
 
+def _auth_response(user, *, status_code):
+    access, refresh = _tokens_for_user(user)
+    body = MeSerializer(user).data
+    body["access"] = access
+    body["refresh"] = refresh
+    return Response(body, status=status_code)
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
         ser = RegisterSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         user = ser.save()
-        access, refresh = _tokens_for_user(user)
-        resp = Response(MeSerializer(user).data, status=status.HTTP_201_CREATED)
-        attach_auth_cookies(resp, access, refresh)
-        return resp
+        return _auth_response(user, status_code=status.HTTP_201_CREATED)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -59,21 +64,19 @@ class LoginView(APIView):
                 {"detail": "Invalid username or password."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        access, refresh = _tokens_for_user(user)
-        resp = Response(MeSerializer(user).data, status=status.HTTP_200_OK)
-        attach_auth_cookies(resp, access, refresh)
-        return resp
+        return _auth_response(user, status_code=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class TokenRefreshView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
-        raw = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
+        raw = request.data.get("refresh")
         if not raw:
             return Response(
-                {"detail": "Refresh cookie missing."},
+                {"detail": "Refresh token missing."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         ser = TokenRefreshSerializer(data={"refresh": raw})
@@ -83,29 +86,25 @@ class TokenRefreshView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         access = ser.validated_data["access"]
-        resp = Response({"detail": "ok"}, status=status.HTTP_200_OK)
         refresh_out = ser.validated_data.get("refresh", raw)
-        attach_auth_cookies(resp, access, refresh_out)
-        return resp
+        return Response({"access": access, "refresh": refresh_out}, status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class LogoutView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request):
-        raw_refresh = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
+        raw_refresh = request.data.get("refresh")
         if raw_refresh:
             try:
                 RefreshToken(raw_refresh).blacklist()
             except Exception:
-                # Missing blacklist app, invalid token, or already blacklisted:
-                # logout should still clear cookies and succeed.
+                # Missing blacklist app, invalid token, or already blacklisted.
                 pass
 
-        resp = Response({"detail": "Logged out."}, status=status.HTTP_200_OK)
-        clear_auth_cookies(resp)
-        return resp
+        return Response({"detail": "Logged out."}, status=status.HTTP_200_OK)
 
 
 class MeView(APIView):
